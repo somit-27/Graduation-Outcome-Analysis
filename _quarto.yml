@@ -6,11 +6,12 @@ execute:
   echo: true
 
 book:
-  title: "YOUR PROJECT TITLE"
+  title: "Graduation Outcome Analysis"
   author:
-    - AUTHOR1 (UNI1)
-    - AUTHOR2 (UNI2)
-  repo-url: https://github.com/YOUR_GITHUB_ACCOUNT/REPO_NAME
+    - Devdatt Golwala (drg2172)
+    - Shashwat Kumar (sk5520)
+    - Somit Amit Jain (sj3396)
+  repo-url: https://github.com/somit-27/Graduation-Outcome-Analysis
   date: today
   page-footer:
     right: |
