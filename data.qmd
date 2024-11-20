@@ -1,5 +1,106 @@
-# Data
+# Technical Description
 
-## Description
+Data Source : The dataset, titled “Graduation results for Cohorts 2012 to 2019 (Classes of 2016 to 2023),” is published by the New York City Department of Education via NYC OpenData. It provides detailed annual statistics on graduation outcomes, including cohort size, graduation rates, diploma types, enrollment status, and dropout rates.
 
+Data Collection : The data follows the New York State Education Department’s methodology, defining a cohort as students who first entered 9th grade in a specific school year. Graduates are defined as those earning either a Local or Regents diploma. The dataset is updated annually, ensuring it reflects the most recent statistics.
+
+Data Format : The dataset is presented in a tabular format, containing 29 columns and multiple rows for each geographic subdivision or school. 
+Key fields include:
+- Cohort Year: Year of entry into 9th grade.
+- % Grads: Percentage of graduates in a cohort.
+- Dropout: Number of students who dropped out.
+- % Advanced Regents of Cohort: Percentage of students earning an Advanced Regents diploma relative to the cohort.
+
+Data Frequency and Updates : The dataset is updated annually, with the most recent data available as of April 4, 2024. This ensures consistency and relevance for long-term trend analysis.
+
+Issues and Challenges:
+
+- Missing Data: Some fields, particularly those related to advanced diploma types or geographic subdivisions, may have incomplete reporting by certain schools.
+- Inconsistencies: Variations in reporting standards across different schools may impact the uniformity of the data.
+
+Data Import : The dataset is available as a downloadable CSV file on NYC OpenData. It can be imported using data analysis tools like R or Python. Libraries such as pandas or data.table in Python or readr in R will be used for efficient data manipulation and exploration.
+
+Source Documentation : The dataset can be accessed at NYC OpenData. Additional details on the data collection methodology are provided by the New York State Education Department.
+
+```{r,warning=FALSE}
+library(tidyverse)  
+library(readr)      
+library(visdat)     
+library(skimr)     
+library(ggdendro)
+```
+
+```{r}
+data <- read_csv("Graduate Results.csv", 
+                 show_col_types = FALSE)
+```
+
+```{r}
+cat("Number of rows:", nrow(data), "\n")
+cat("Number of columns:", ncol(data), "\n")
+
+```
+```{r}
+cat("Column names:\n")
+print(colnames(data))
+
+cat("\nSummary of the dataset:\n")
+print(summary(data))
+```
 ## Missing value analysis
+
+```{r}
+missing_values <- colSums(is.na(data))
+
+print(missing_values)
+
+total_missing <- sum(is.na(data))
+print(paste("Total missing values:", total_missing))
+```
+
+```{r}
+data_clean <- data |>
+  select(-`# SACC (IEP Diploma)`, 
+         -`% SACC (IEP Diploma) of Cohort`, 
+         -`# TASC (GED)`, 
+         -`% TASC (GED) of Cohort`, 
+         -`School Name`)
+```
+
+```{r}
+missing_values <- colSums(is.na(data_clean))  # This gives the number of missing values for each column
+
+missing_df <- data.frame(
+  column = names(missing_values),
+  missing_count = missing_values
+)
+
+# Filter out columns that don't have any missing values
+missing_df <- missing_df |> filter(missing_count > 0)
+
+# Plot missing values by column
+ggplot(missing_df, aes(x = reorder(column, missing_count), y = missing_count)) +
+  geom_bar(stat = "identity", fill = "royalblue") +
+  coord_flip() +
+  labs(title = "Missing Values by Column", x = "Column", y = "Number of Missing Values") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+```
+This bar chart shows missing values across dataset columns. Columns like % Total Regents of Grads, % Regents without Advanced of Grads, and % Local of Grads have the most missing data. Cohort-related percentages and count-based columns, such as # Total Regents and # Dropout, show fewer missing values. Percentage-based columns generally have more gaps, which may affect analysis quality.
+
+```{r}
+missing_matrix <- is.na(data_clean)
+
+hc <- hclust(dist(t(missing_matrix)))
+
+# Plot the dendrogram
+ggdendrogram(hc, rotate = TRUE) +
+  labs(
+    title = "Dendrogram of Missing Data Patterns",
+    x = "Columns",
+    y = "Dissimilarity"
+  )
+```
+The dendrogram illustrates clustering patterns of columns based on their missing data similarity. Columns like "% Advanced Regents of Grads" and "% Total Regents of Grads" are closely grouped, indicating similar missingness behavior. Broader separations between clusters signify distinct missingness patterns across groups of variables. This structure helps identify patterns for imputation or exclusion, ensuring efficient handling of missing data while preserving relationships within clustered variables.
+
+
