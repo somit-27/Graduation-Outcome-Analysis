@@ -1,5 +1,6 @@
-# Technical Description
+# Data
 
+## Description
 Data Source : The dataset, titled “Graduation results for Cohorts 2012 to 2019 (Classes of 2016 to 2023),” is published by the New York City Department of Education via NYC OpenData. It provides detailed annual statistics on graduation outcomes, including cohort size, graduation rates, diploma types, enrollment status, and dropout rates.
 
 Data Collection : The data follows the New York State Education Department’s methodology, defining a cohort as students who first entered 9th grade in a specific school year. Graduates are defined as those earning either a Local or Regents diploma. The dataset is updated annually, ensuring it reflects the most recent statistics.
