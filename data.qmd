@@ -14,7 +14,7 @@ Key fields include:
 
 Data Frequency and Updates : The dataset is updated annually, with the most recent data available as of April 4, 2024. This ensures consistency and relevance for long-term trend analysis.
 
-Issues and Challenges:
+Issues and challenges:
 
 - Missing Data: Some fields, particularly those related to advanced diploma types or geographic subdivisions, may have incomplete reporting by certain schools.
 - Inconsistencies: Variations in reporting standards across different schools may impact the uniformity of the data.
