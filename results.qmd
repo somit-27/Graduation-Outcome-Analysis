@@ -1,1 +1,41 @@
 # Results
+
+
+```{r,warning=FALSE}
+library(tidyverse)  
+library(readr)      
+library(visdat)     
+library(skimr)     
+library(ggdendro)
+```
+
+```{r}
+data <- read_csv("Graduate Results.csv", 
+                 show_col_types = FALSE)
+```
+
+```{r}
+data_clean <- data |>
+  select(-`# SACC (IEP Diploma)`, 
+         -`% SACC (IEP Diploma) of Cohort`, 
+         -`# TASC (GED)`, 
+         -`% TASC (GED) of Cohort`, 
+         -`School Name`)
+```
+
+```{r}
+# Convert specific columns to numeric
+numeric_columns <- c("# Total Cohort", "# Grads", "% Grads", "# Total Regents",
+                     "% Total Regents of Cohort", "% Total Regents of Grads", 
+                     "# Advanced Regents", "% Advanced Regents of Cohort", 
+                     "% Advanced Regents of Grads", "# Regents without Advanced",
+                     "% Regents without Advanced of Cohort", 
+                     "% Regents without Advanced of Grads", "# Local", 
+                     "% Local of Cohort", "% Local of Grads", "# Still Enrolled", 
+                     "% Still Enrolled", "# Dropout", "% Dropout")
+
+data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) as.numeric(as.character(x)))
+
+```
+
+
