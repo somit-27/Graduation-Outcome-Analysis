@@ -1,6 +1,6 @@
 # Interactive Graph
 
-## % Graduation for Cohort of 4 year August across NYC Boroughs
+## Percentage Graduation for Cohort of 4 year August across NYC Boroughs
 
 ```{r setup, include=FALSE}
 library(dplyr)
