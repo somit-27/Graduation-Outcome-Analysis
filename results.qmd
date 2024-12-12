@@ -45,13 +45,35 @@ data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) a
 
 ```
 
+
 ```{r}
-ggplot(data_clean, aes(x = as.factor(`Cohort Year`))) +
-  geom_bar(position = "dodge", fill = "lightblue") +  # Change 'color' to 'fill' for the bar color
+data_clean_summary <- data_clean %>%
+  group_by(`Cohort Year`) %>%
+  summarise(Count = n()) %>%
+  filter(Count > 0)  # Filter out years with zero count
+
+# Create the bar chart
+library(ggplot2)
+
+ggplot(data_clean_summary, aes(x = as.factor(`Cohort Year`), y = Count)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  geom_text(aes(label = ifelse(Count < 1000, Count, "")),  # Add labels for small values
+            vjust = -0.5, size = 3, color = "red") +
   labs(title = "Count of Students by Cohort Year",
        x = "Cohort Year", y = "Count") +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate X-axis labels
 ```
+
+Bar Chart showing count of Students by cohort year: This graph is shedding light on trends in student populations from 2000 to 2019. A clear pattern emerges, with minimal student counts observed for years before 2012, followed by a sharp and sustained increase beginning in 2012. This marks a significant shift in the dataset’s scope and reliability.
+
+Pre-2012 Data:
+The student counts from 2000 to 2011 are notably low, represented by red labels to emphasize their sparseness. This is likely due to incomplete or inconsistent data collection processes prior to 2012. These discrepancies in earlier years reflect the dataset's limitations and necessitated their exclusion during preprocessing to maintain data integrity. Removing pre-2012 data ensures that the analysis focuses on cohorts tracked using a consistent methodology and avoids inaccuracies stemming from incomplete records.
+
+Post-2012 Data:
+From 2012 onward, there is a marked surge in student counts, which remains steady until 2018. This consistency suggests either improved data tracking systems or an actual increase in 9th-grade enrollments, possibly driven by policy changes, population growth, or enhanced reporting mechanisms. The dataset’s title, "Graduation results for Cohorts 2012 to 2019," confirms that it is specifically designed to track these later cohorts with detailed and standardized data.
+
+
 ```{r,warning=FALSE}
 # Histogram
 ggplot(data_clean, aes(x = `% Grads`)) +
@@ -61,6 +83,7 @@ ggplot(data_clean, aes(x = `% Grads`)) +
   theme_minimal()
 
 ```
+Distribution of % Grads: This histogram shows the frequency distribution of graduation percentages across the cohort dataset. It reveals that most cohorts have graduation rates concentrated towards higher percentages, with a peak around 100%.
 
 ```{r,warning=FALSE}
 # Cleveland Dot Plot
@@ -75,6 +98,7 @@ ggplot(aggregated_data, aes(x = mean_grads, y = reorder(Category, mean_grads))) 
        x = "Mean % Grads", y = "Category") +
   theme_minimal()
 ```
+Average Graduation Rates by Category: This dot plot ranks various demographic and academic categories based on average graduation percentages. Categories such as "Female Asian" and "Neither Female nor Male Multi-Racial" exhibit the highest rates, while "Current ELL" shows the lowest.
 
 ```{r,warning=FALSE}
 top_categories <- data_clean %>%
@@ -103,12 +127,16 @@ ggplot(filtered_data, aes(x = `% Advanced Regents of Cohort`, y = fct_reorder(Ca
   scale_fill_viridis_d()
 
 ```
+Ridgeline plot showing the distribution of percentages of students earning an Advanced Regents diploma across various demographic categories: 
+Here, The demographic categories include combinations of gender and race/ethnicity, such as "Female Asian," "Male Asian," "Female White," and others. Each demographic group is represented by a density curve, showing how the percentages of Advanced Regents diplomas are distributed within that group. The peaks in the curves indicate the most common values for each category, and the groups are ordered by their median percentages, from highest to lowest.
+
+Key observations reveal that "Female Asian" and "Male Asian" categories have higher peaks at higher percentages, suggesting a larger proportion of students in these groups earn Advanced Regents diplomas. Similarly, "Female White" and "Male Multi-Racial" also exhibit relatively high medians, while "Female Native American" appears at the bottom of the plot, indicating lower median percentages. The use of distinct colors for each category and the overlapping ridgelines provide a clear visual comparison of achievements among groups.
+
+This plot offers valuable insights into the disparities and successes in earning Advanced Regents diplomas among different demographic groups, highlighting those with higher achievements. These findings can inform educational policies and support strategies to address the observed disparities.
+
 ```{r}
-
-# Assuming the 'data_clean' dataframe is already prepared
-
-# Create a new column to categorize the data
-data_clean <- data_clean %>%
+data_filtered <- data_clean %>%
+  filter(`Cohort Year` >= 2012) %>%
   mutate(
     Graduation_Status = case_when(
       `% Grads` >= 80 ~ "Graduated",
@@ -118,24 +146,35 @@ data_clean <- data_clean %>%
   )
 
 # Group by 'Cohort Year' and 'Graduation Status' and calculate the counts
-data_grouped <- data_clean %>%
+data_grouped <- data_filtered %>%
   group_by(`Cohort Year`, Graduation_Status) %>%
   summarise(count = n(), .groups = 'drop')
 
-# Create the diverging stacked bar chart
-ggplot(data_grouped, aes(x = `Cohort Year`, y = count, fill = Graduation_Status)) +
-  geom_bar(stat = "identity", position = "fill") +
-  scale_y_continuous(labels = scales::percent_format()) +
+# Create the updated diverging stacked bar chart
+ggplot(data_grouped, aes(x = reorder(`Cohort Year`, desc(`Cohort Year`)), y = count, fill = Graduation_Status)) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent_format(), expand = c(0, 0)) +
   coord_flip() +
-  labs(title = "Diverging Stacked Bar Chart of Graduation Status by Cohort Year",
-       x = "Cohort Year",
-       y = "Percentage",
-       fill = "Graduation Status") +
-  scale_fill_manual(values = c("Graduated" = "blue", "Dropout" = "lightblue", "Not Graduated" = "lightgrey")) +
+  labs(
+    title = "Graduation and Dropout Rates by Cohort Year (2012 and Later)",
+    x = "Cohort Year",
+    y = "Percentage",
+    fill = "Graduation Status"
+  ) +
+  scale_fill_manual(values = c("Graduated" = "#1f78b4", "Dropout" = "#a6cee3", "Not Graduated" = "#cccccc")) +
+  geom_text(aes(label = scales::percent(count / sum(count), accuracy = 1)), 
+            position = position_fill(vjust = 0.5), size = 3) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 0, hjust = 0.5),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
 
 ```
+⁠Diverging Stacked Bar Chart of Graduation Status by Cohort Year: This visualization illustrates the breakdown of graduation statuses (Graduated, Not Graduated, Dropout) over cohort years, showing an increasing trend in graduation rates for recent years.
+
 ```{r,warning=FALSE}
 # Load required libraries
 
@@ -183,6 +222,8 @@ ggplot(nyc_boroughs) +
     legend.position = "bottom"
   )
 ```
+⁠Graduation Rates by Borough and Demographic Category: This heatmap compares graduation rates across boroughs and demographic categories, with darker shades indicating higher graduation percentages. Staten Island consistently demonstrates high graduation rates across most categories, while the Bronx shows relatively lower rates.
+
 ```{r}
 
 
@@ -219,6 +260,8 @@ ggplot(filtered_treemap_data, aes(area = Total_Cohort, fill = Total_Cohort, labe
     legend.position = "bottom"
   )
 ```
+Filtered Treemap of Total Cohort Sizes by Category: This treemap displays the total cohort sizes by demographic and academic categories, with larger blocks representing larger cohort sizes. Categories like "Male" and "Never ELL" dominate the cohort composition.
+
 ```{r}
 
 # Preprocessing
@@ -269,6 +312,8 @@ ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = 
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 ```
+Distribution of Diploma Types Over Time: The stacked bar chart with a log-transformed y-axis shows the proportions of Advanced Regents and Local diploma types across cohort years, indicating an increasing trend in Advanced Regents diplomas over time.
+
 ```{r}
 
 # Preprocessing
@@ -308,7 +353,7 @@ ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = 
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-
+Distribution of Diploma Types Over Time: The stacked bar chart with a log-transformed y-axis shows the proportions of Advanced Regents and Local diploma types across cohort years, indicating an increasing trend in Advanced Regents diplomas over time.
 
 ```{r,warning=FALSE}
 line_chart_data <- data_clean %>%
@@ -331,6 +376,7 @@ ggplot(line_chart_data, aes(x = factor(`Cohort Year`), y = Average_Grads, color 
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+⁠Distribution of Graduation Percentages in Different Boroughs: Faceted histograms provide a detailed look at the distribution of graduation rates within each NYC borough, revealing that Staten Island and Queens have the most right-skewed distributions, indicating higher rates overall.
 
 
 ```{r,warning=FALSE}
@@ -343,6 +389,8 @@ ggplot(data_borough, aes(x = `% Grads`)) +
 
 
 ```
+⁠Distribution of Graduation Percentages in Different Boroughs: Faceted histograms provide a detailed look at the distribution of graduation rates within each NYC borough, revealing that Staten Island and Queens have the most right-skewed distributions, indicating higher rates overall.
+
 ```{r}
 #| fig-width: 8
 #| fig-height: 10
@@ -354,7 +402,7 @@ filtered_data <- data_clean %>%
   ungroup()
 
 ggplot(filtered_data, aes(x = `# Dropout`, y = reorder(`School Name`, `# Dropout`))) +
-  geom_point(size = 4, color = "lightblue") +
+  geom_point(size = 4, shape = 21, fill = "lightblue", color = "black", stroke = 1) +
   facet_wrap(~ Cohort, ncol = 1, scales = "free_y") +  # Facet by cohort
   labs(title = "Top 10 Schools by Dropout Rate Faceted by Cohort",
        x = "Number of Dropouts",
@@ -363,21 +411,23 @@ ggplot(filtered_data, aes(x = `# Dropout`, y = reorder(`School Name`, `# Dropout
   theme(strip.text = element_text(face = "bold"),  # Bold facet labels
         axis.text.y = element_text(size = 5),     # Adjust y-axis text size
         axis.text.x = element_text(size = 9))     # Adjust x-axis text size
-
-
-
 ```
 
+⁠Top 10 Schools by Dropout Rate Faceted by Cohort: The scatter plot shows dropout counts for the top 10 schools across different cohort time frames, highlighting schools with consistently high dropout numbers over the years.
+
 ```{r,warning=FALSE}
-ggplot(data_clean, aes(x = `Cohort Year`)) +
+ggplot(data_clean[data_clean$`Cohort Year` >= 2012, ], aes(x = `Cohort Year`)) +
   geom_bar(aes(y = `# Total Cohort`), stat = "identity", fill = "lightblue", position = "dodge") +
   geom_bar(aes(y = `# Total Regents`), stat = "identity", fill = "darkblue", alpha = 0.5, position = "dodge") +
+  scale_x_continuous(breaks = seq(2012, 2020, 1)) + # Adjust to include all desired years
   theme_minimal() +
-  labs(title = "Total Cohort and Total Regents per Cohort Year", 
+  labs(title = "Total Cohort and Total Regents per Cohort Year (From 2012)", 
        x = "Cohort Year", 
        y = "Count") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+
 
 ```{r}
 
@@ -400,12 +450,9 @@ ggplot(borough_data, aes(x = Category, y = `Geographic Subdivision`, fill = `% G
     plot.title = element_text(hjust = 0.5)
 )
 
-
-
 ```
 
-
-
+Graduation Rates by Borough and Demographic Category: This heatmap compares graduation rates across boroughs and demographic categories, with darker shades indicating higher graduation percentages. Staten Island consistently demonstrates high graduation rates across most categories, while the Bronx shows relatively lower rates.
 
 ```{r}
 ggplot(data_clean, aes(x = `# Advanced Regents`, y = `% Grads`)) +
@@ -415,6 +462,7 @@ ggplot(data_clean, aes(x = `# Advanced Regents`, y = `% Grads`)) +
        x = "% Advanced Regents",
        y = "% Grads")
 ```
+⁠Correlation Between % Advanced Regents and % Grads: This scatter plot illustrates the relationship between the percentage of Advanced Regents diplomas and overall graduation rates. The gradient coloring by cohort year highlights that more recent cohorts tend to have higher concentrations of Advanced Regents diplomas correlating with higher graduation percentages.
 
 ```{r,warning=FALSE}
 ggplot(data_clean, aes(x = `% Still Enrolled`)) +
@@ -425,7 +473,7 @@ ggplot(data_clean, aes(x = `% Still Enrolled`)) +
   scale_x_log10()
 
 ```
-
+⁠Density Plot of % Still Enrolled vs % Dropout: This plot compares the density distribution of percentages for students still enrolled versus those who dropped out. The two distributions overlap, but the dropout rates tend to peak at higher percentages compared to still-enrolled rates.
 
 ```{r}
 data_tree <- data_clean |> filter(`Report Category` == "Borough")
@@ -436,5 +484,4 @@ treemap(data_tree,
         draw = TRUE)
 
 ```
-
-
+Total Cohort Treemap by Borough and Category: This treemap visualizes cohort sizes categorized by demographic factors and boroughs. Larger blocks represent higher cohort counts, with "All Students" and "Not ELL" categories being the most prevalent across boroughs like Brooklyn and Manhattan.
