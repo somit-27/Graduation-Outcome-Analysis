@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const plotContainer = d3.select("#plot");
 
   // Load the filtered CSV file and render the initial chart
-  d3.csv("./filtered_graduate_results.csv").then(function (data) {
+  d3.csv("https://raw.githubusercontent.com/somit-27/Graduation-Outcome-Analysis/refs/heads/main/filtered_graduate_results.csv").then(function (data) {
     // Parse numeric values for "% Grads" and Year
     data.forEach(d => {
       d["% Grads"] = +d["% Grads"];
