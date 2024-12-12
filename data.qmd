@@ -24,7 +24,7 @@ Data Import : The dataset is available as a downloadable CSV file on NYC OpenDat
 Source Documentation : The dataset can be accessed at NYC OpenData. Additional details on the data collection methodology are provided by the New York State Education Department.
 
 ```{r,warning=FALSE}
-library(tidyverse)  
+suppressMessages(library(tidyverse))  
 library(readr)      
 library(visdat)     
 library(skimr)     
