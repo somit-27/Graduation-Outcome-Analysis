@@ -23,8 +23,7 @@ data_clean <- data |>
   select(-`# SACC (IEP Diploma)`, 
          -`% SACC (IEP Diploma) of Cohort`, 
          -`# TASC (GED)`, 
-         -`% TASC (GED) of Cohort`, 
-         -`School Name`)
+         -`% TASC (GED) of Cohort`)
 ```
 
 ```{r}
@@ -189,7 +188,7 @@ library(tidyverse)
 library(treemapify)
 
 # Preprocessing: Filter out "All Students" and other broad categories
-filtered_treemap_data <- data %>%
+filtered_treemap_data <- data_cleaned %>%
   filter(
     `Report Category` == "Citywide",
     !`Category` %in% c("All Students", "Not SWD", "Not ELL")
@@ -225,7 +224,7 @@ ggplot(filtered_treemap_data, aes(area = Total_Cohort, fill = Total_Cohort, labe
 library(tidyverse)
 
 # Preprocessing
-stacked_data <- data %>%
+stacked_data <- data_cleaned %>%
   filter(`Report Category` == "Citywide") %>%
   mutate(
     `# Advanced Regents` = as.numeric(`# Advanced Regents`),
@@ -276,7 +275,7 @@ ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = 
 library(tidyverse)
 
 # Preprocessing
-stacked_data <- data %>%
+stacked_data <- data_cleaned %>%
   filter(`Report Category` == "Citywide") %>%
   mutate(
     `# Advanced Regents` = as.numeric(`# Advanced Regents`),
@@ -316,7 +315,7 @@ ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = 
 
 ```{r}
 # Preprocessing
-line_chart_data <- data %>%
+line_chart_data <- data_cleaned %>%
   filter(`Report Category` == "Borough") %>%
   mutate(`% Grads` = as.numeric(`% Grads`)) %>%
   group_by(`Geographic Subdivision`, `Cohort Year`) %>%
@@ -335,6 +334,134 @@ ggplot(line_chart_data, aes(x = factor(`Cohort Year`), y = Average_Grads, color 
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+<!-- ```{r} -->
+<!-- # Convert specific columns to numeric -->
+<!-- numeric_columns <- c("# Total Cohort", "# Grads", "% Grads", "# Total Regents", -->
+<!--                      "% Total Regents of Cohort", "% Total Regents of Grads",  -->
+<!--                      "# Advanced Regents", "% Advanced Regents of Cohort",  -->
+<!--                      "% Advanced Regents of Grads", "# Regents without Advanced", -->
+<!--                      "% Regents without Advanced of Cohort",  -->
+<!--                      "% Regents without Advanced of Grads", "# Local",  -->
+<!--                      "% Local of Cohort", "% Local of Grads", "# Still Enrolled",  -->
+<!--                      "% Still Enrolled", "# Dropout", "% Dropout") -->
+
+<!-- data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) as.numeric(as.character(x))) -->
+<!-- data[numeric_columns] <- lapply(data[numeric_columns], function(x) as.numeric(as.character(x))) -->
+<!-- ``` -->
+
+
+```{r}
+library(ggplot2)
+data_borough <- data_clean |> filter(`Report Category` == "Borough")
+ggplot(data_borough, aes(x = `% Grads`)) +
+  geom_histogram(bins = 20, fill = "skyblue", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Graduation Percentages in different Boroughs", x = "Graduation Percentage", y = "Count")+
+  facet_wrap(~`Geographic Subdivision`)
+
+
+```
+```{r}
+#| fig-width: 8
+#| fig-height: 10
+
+filtered_data <- data_clean %>%
+  filter(Category == "All Students", `Report Category` == "School") %>%
+  group_by(Cohort) %>%  # Group by cohort first
+  slice_max(`# Dropout`, n = 10) %>%  # Get the top 10 schools for each cohort
+  ungroup()
+
+ggplot(filtered_data, aes(x = `# Dropout`, y = reorder(`School Name`, `# Dropout`))) +
+  geom_point(size = 4, color = "lightblue") +
+  facet_wrap(~ Cohort, ncol = 1, scales = "free_y") +  # Facet by cohort
+  labs(title = "Top 10 Schools by Dropout Rate Faceted by Cohort",
+       x = "Number of Dropouts",
+       y = "School") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),  # Bold facet labels
+        axis.text.y = element_text(size = 5),     # Adjust y-axis text size
+        axis.text.x = element_text(size = 9))     # Adjust x-axis text size
+
+
+
+```
+
+```{r}
+ggplot(dat, aes(x = `Cohort Year`)) +
+  geom_bar(aes(y = `clean_# Total Cohort`), stat = "identity", fill = "lightblue", position = "dodge") +
+  geom_bar(aes(y = `clean_# Total Regents`), stat = "identity", fill = "darkblue", alpha = 0.5, position = "dodge") +
+  theme_minimal() +
+  labs(title = "Total Cohort and Total Regents per Cohort Year", 
+       x = "Cohort Year", 
+       y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+
+# Filter dataset for borough-level data
+borough_data <- data_clean %>%
+  filter(`Geographic Subdivision` %in% c("Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island") & !is.na(`% Grads`))
+borough_data$`Geographic Subdivision` <- factor(borough_data$`Geographic Subdivision`, levels = c("Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"))
+borough_data$Category <- factor(borough_data$Category, levels = unique(borough_data$Category))
+ggplot(borough_data, aes(x = Category, y = `Geographic Subdivision`, fill = `% Grads`)) +
+  geom_tile(color = "white") +  # Add white grid lines for clarity
+  scale_fill_gradient(low = "lightblue", high = "darkblue", name = "% Grads") +
+  labs(
+    title = "Graduation Rates by Borough and Demographic Category",
+    x = "Demographic Category",
+    y = "Borough"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(hjust = 0.5)
+)
+
+
+
+```
+
+
+
+
+```{r}
+ggplot(data_cleaned, aes(x = `clean_# Advanced Regents`, y = `clean_% Grads`)) +
+  geom_point(aes(color = `Cohort Year`), alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Correlation Between % Advanced Regents and % Grads", 
+       x = "% Advanced Regents",
+       y = "% Grads")
+```
+
+```{r}
+ggplot(data_cleaned, aes(x = `clean_% Still Enrolled`)) +
+  geom_density(fill = "lightblue", alpha = 0.5) +
+  geom_density(aes(x = `clean_% Dropout`), fill = "darkblue", alpha = 0.5) +
+  theme_minimal() +
+  labs(title = "Density Plot of % Still Enrolled vs % Dropout", x = "% Enrolled / Dropout", y = "Density")+
+  scale_x_log10()
+
+```
+```{r}
+ggplot(data_cleaned, aes(x = `clean_# TASC (GED)`, y = `clean_# Advanced Regents`, color = `clean_# Regents without Advanced`)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "TASC vs Regents with Advanced", x = "TASC", y = "Advanced Regents")
+
+```
+
+
+```{r}
+library(treemap)
+data_tree <- data_cleaned |> filter(`Report Category` == "Borough")
+treemap(data_tree, 
+        index = c("Geographic Subdivision", "Category"), 
+        vSize = "clean_# Total Cohort", 
+        vColor = "clean_%Grads", 
+        draw = TRUE)
+
 ```
 
 
