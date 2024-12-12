@@ -1,13 +1,50 @@
-# Interactive graph
+# Interactive Graph
 
-<style>
-  * {
-    font-family: sans-serif;
-  }
-</style> 
+## % Graduation for Cohort of 4 year August across NYC Boroughs
 
-<div id="plot">
+```{r setup, include=FALSE}
+library(dplyr)
+library(readr)
+
+data <- read.csv("Graduate Results.csv")
+
+cat("Original data dimensions:", dim(data), "\n")
+
+data$X..Grads.1 <- as.numeric(data$X..Grads.1)
+data$Cohort.Year <- as.numeric(data$Cohort.Year)
+
+filtered_data <- data |> filter(Report.Category == "Borough",
+                                Category == "All Students",
+                                Cohort == "4 year August")
+
+cat("Filtered data dimensions:", dim(filtered_data), "\n")
+
+if (nrow(filtered_data) > 0) {
+  filtered_data <- filtered_data %>%
+    select(Geographic.Subdivision, Cohort.Year,X..Grads.1)
+    colnames(filtered_data)[colnames(filtered_data) == "Geographic.Subdivision"] <- "Geographic Subdivision"
+    colnames(filtered_data)[colnames(filtered_data) == "X..Grads.1"] <- "% Grads"
+    colnames(filtered_data)[colnames(filtered_data) == "Cohort.Year"] <- "Year"
+  write.csv(filtered_data, "./docs/filtered_graduate_results.csv", row.names = FALSE)
+} else {
+  cat("No rows found for the selected Report Category: Borough\n")
+}
+
+
+```
+
+
+<div>
+  <label for="boroughFilter">Filter by Geographic Subdivision:</label>
+  <select id="boroughFilter">
+    <option value="All">Choose a Borough:</option>
+    <!-- Options will be dynamically populated by JavaScript -->
+  </select>
 </div>
+
+<div id="plot"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="scripts/myscript.js"></script>
+
+
