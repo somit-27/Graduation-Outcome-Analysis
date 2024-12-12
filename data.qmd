@@ -1,7 +1,6 @@
-# Data
+# Technical Description
 
 ## Description
-Data Source : The dataset, titled “Graduation results for Cohorts 2012 to 2019 (Classes of 2016 to 2023),” is published by the New York City Department of Education via NYC OpenData. It provides detailed annual statistics on graduation outcomes, including cohort size, graduation rates, diploma types, enrollment status, and dropout rates.
 
 Data Collection : The data follows the New York State Education Department’s methodology, defining a cohort as students who first entered 9th grade in a specific school year. Graduates are defined as those earning either a Local or Regents diploma. The dataset is updated annually, ensuring it reflects the most recent statistics.
 
@@ -39,9 +38,10 @@ data <- read_csv("Graduate Results.csv",
 ```{r}
 cat("Number of rows:", nrow(data), "\n")
 cat("Number of columns:", ncol(data), "\n")
-
 ```
+
 ```{r}
+
 cat("Column names:\n")
 print(colnames(data))
 
@@ -87,6 +87,7 @@ ggplot(missing_df, aes(x = reorder(column, missing_count), y = missing_count)) +
   theme_minimal() +
   theme(axis.text.y = element_text(size = 8))
 ```
+
 This bar chart shows missing values across dataset columns. Columns like % Total Regents of Grads, % Regents without Advanced of Grads, and % Local of Grads have the most missing data. Cohort-related percentages and count-based columns, such as # Total Regents and # Dropout, show fewer missing values. Percentage-based columns generally have more gaps, which may affect analysis quality.
 
 ```{r}
@@ -102,4 +103,6 @@ ggdendrogram(hc, rotate = TRUE) +
     y = "Dissimilarity"
   )
 ```
+
 The dendrogram illustrates clustering patterns of columns based on their missing data similarity. Columns like "% Advanced Regents of Grads" and "% Total Regents of Grads" are closely grouped, indicating similar missingness behavior. Broader separations between clusters signify distinct missingness patterns across groups of variables. This structure helps identify patterns for imputation or exclusion, ensuring efficient handling of missing data while preserving relationships within clustered variables.
+
