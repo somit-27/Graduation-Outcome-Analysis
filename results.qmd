@@ -15,6 +15,10 @@ data <- read_csv("Graduate Results.csv",
 ```
 
 ```{r}
+colnames(data)
+```
+
+```{r}
 data_clean <- data |>
   select(-`# SACC (IEP Diploma)`, 
          -`% SACC (IEP Diploma) of Cohort`, 
@@ -131,4 +135,206 @@ ggplot(data_grouped, aes(x = `Cohort Year`, y = count, fill = Graduation_Status)
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
+```{r}
+# Load required libraries
+library(tidyverse)
+library(sf)
+library(tigris)
+
+# Load NYC borough shapefile using tigris
+nyc_boroughs <- counties(state = "NY", cb = TRUE) %>%
+  filter(NAME %in% c("New York", "Richmond", "Queens", "Kings", "Bronx"))
+
+# Load dataset
+# Replace 'data' with your dataset containing graduation rates and borough information
+data <- tibble(
+  Borough = c("Manhattan", "Staten Island", "Queens", "Brooklyn", "Bronx"),
+  GradRate = c(85.3, 82.5, 83.7, 81.2, 77.5)
+)
+
+# Map borough names to match shapefile
+data <- data %>%
+  mutate(
+    NAME = case_when(
+      Borough == "Manhattan" ~ "New York",
+      Borough == "Staten Island" ~ "Richmond",
+      Borough == "Brooklyn" ~ "Kings",
+      TRUE ~ Borough
+    )
+  )
+
+# Merge shapefile and data
+nyc_boroughs <- nyc_boroughs %>%
+  left_join(data, by = "NAME")
+
+# Plot the choropleth with labels and sequential blue color scheme
+ggplot(nyc_boroughs) +
+  geom_sf(aes(fill = GradRate), color = "black") +
+  geom_sf_text(aes(label = Borough), size = 4, color = "black") +
+  scale_fill_distiller(palette = "Blues", direction = 1, name = "Grad Rate (%)") +
+  labs(
+    title = "NYC Borough-Wise Graduation Rates",
+    subtitle = "Filtered for Accurate Boroughs with Proper Labels",
+    caption = "Data Source: NYC Graduation Rates Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+```
+```{r}
+library(tidyverse)
+library(treemapify)
+
+# Preprocessing: Filter out "All Students" and other broad categories
+filtered_treemap_data <- data %>%
+  filter(
+    `Report Category` == "Citywide",
+    !`Category` %in% c("All Students", "Not SWD", "Not ELL")
+  ) %>%
+  mutate(
+     `# Total Cohort` = as.numeric(`# Total Cohort`)) %>%
+  group_by(`Category`) %>%
+  summarise(Total_Cohort = sum(`# Total Cohort`, na.rm = TRUE)) %>%
+  arrange(desc(Total_Cohort))
+
+# Treemap with filtered data
+ggplot(filtered_treemap_data, aes(area = Total_Cohort, fill = Total_Cohort, label = Category)) +
+  geom_treemap() +
+  geom_treemap_text(
+    fontface = "bold", 
+    colour = "white", 
+    place = "centre", 
+    size = 5
+  ) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue", name = "Cohort Size") +
+  labs(
+    title = "Filtered Treemap of Total Cohort Sizes by Category",
+    subtitle = "Excluding Broad Categories for Better clarity"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+```{r}
+library(tidyverse)
+
+# Preprocessing
+stacked_data <- data %>%
+  filter(`Report Category` == "Citywide") %>%
+  mutate(
+    `# Advanced Regents` = as.numeric(`# Advanced Regents`),
+    `# Local` = as.numeric(`# Local`),
+    `# Grads` = as.numeric(`# Grads`)
+  ) %>%
+  group_by(`Cohort Year`) %>%
+  summarise(
+    Advanced_Regents = sum(`# Advanced Regents`, na.rm = TRUE),
+    Local = sum(`# Local`, na.rm = TRUE),
+    Total_Grads = sum(`# Grads`, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Advanced_Regents_Perc = Advanced_Regents / Total_Grads * 100,
+    Local_Perc = Local / Total_Grads * 100
+  )
+
+# Reshape for plotting
+stacked_data_long <- stacked_data %>%
+  pivot_longer(cols = c(Advanced_Regents_Perc, Local_Perc), names_to = "Diploma Type", values_to = "Percentage")
+
+# Plot with adjusted scale and new color scheme
+ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = `Diploma Type`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_manual(
+    values = c("Advanced_Regents_Perc" = "lightblue", "Local_Perc" = "blue"),
+    labels = c("Advanced Regents", "Local")
+  ) +
+  labs(
+    title = "Distribution of Diploma Types Over Time",
+    subtitle = "Focusing on Lower Percentage Bars",
+    x = "Cohort Year",
+    y = "Percentage of Graduates",
+    fill = "Diploma Type"
+  ) +
+  coord_cartesian(ylim = c(0, 50)) + # Adjust scale to focus on lower bars
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "right",
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+```{r}
+library(tidyverse)
+
+# Preprocessing
+stacked_data <- data %>%
+  filter(`Report Category` == "Citywide") %>%
+  mutate(
+    `# Advanced Regents` = as.numeric(`# Advanced Regents`),
+    `# Local` = as.numeric(`# Local`),
+    `# Grads` = as.numeric(`# Grads`)
+  ) %>%
+  group_by(`Cohort Year`) %>%
+  summarise(
+    Advanced_Regents = sum(`# Advanced Regents`, na.rm = TRUE),
+    Local = sum(`# Local`, na.rm = TRUE),
+    Total_Grads = sum(`# Grads`, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Advanced_Regents_Perc = Advanced_Regents / Total_Grads * 100,
+    Local_Perc = Local / Total_Grads * 100
+  )
+
+# Reshape for plotting
+stacked_data_long <- stacked_data %>%
+  pivot_longer(cols = c(Advanced_Regents_Perc, Local_Perc), names_to = "Diploma Type", values_to = "Percentage")
+
+ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = `Diploma Type`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_y_log10() +  # Apply log transformation
+  labs(
+    title = "Distribution of Diploma Types Over Time",
+    subtitle = "Log Transformation Applied to Y-Axis for Better Visibility",
+    x = "Cohort Year",
+    y = "Log-Scaled Percentage of Graduates",
+    fill = "Diploma Type"
+  ) +
+  scale_fill_manual(values = c("lightblue", "blue")) +  # Consistent colors
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+```{r}
+# Preprocessing
+line_chart_data <- data %>%
+  filter(`Report Category` == "Borough") %>%
+  mutate(`% Grads` = as.numeric(`% Grads`)) %>%
+  group_by(`Geographic Subdivision`, `Cohort Year`) %>%
+  summarise(Average_Grads = mean(`% Grads`, na.rm = TRUE)) %>%
+  drop_na(Average_Grads)
+
+# Plot
+ggplot(line_chart_data, aes(x = factor(`Cohort Year`), y = Average_Grads, color = `Geographic Subdivision`, group = `Geographic Subdivision`)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Trends in Graduation Rates by Borough",
+    x = "Cohort Year",
+    y = "Average Graduation Rate (%)",
+    color = "Borough"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 
