@@ -1,6 +1,9 @@
-# Data
+# Technical Description
 
+<<<<<<< HEAD
 ## Description
+=======
+>>>>>>> 0f7d77b (Checkpoint-1)
 Data Source : The dataset, titled “Graduation results for Cohorts 2012 to 2019 (Classes of 2016 to 2023),” is published by the New York City Department of Education via NYC OpenData. It provides detailed annual statistics on graduation outcomes, including cohort size, graduation rates, diploma types, enrollment status, and dropout rates.
 
 Data Collection : The data follows the New York State Education Department’s methodology, defining a cohort as students who first entered 9th grade in a specific school year. Graduates are defined as those earning either a Local or Regents diploma. The dataset is updated annually, ensuring it reflects the most recent statistics.
@@ -14,7 +17,11 @@ Key fields include:
 
 Data Frequency and Updates : The dataset is updated annually, with the most recent data available as of April 4, 2024. This ensures consistency and relevance for long-term trend analysis.
 
+<<<<<<< HEAD
 Issues and challenges:
+=======
+Issues and Challenges:
+>>>>>>> 0f7d77b (Checkpoint-1)
 
 - Missing Data: Some fields, particularly those related to advanced diploma types or geographic subdivisions, may have incomplete reporting by certain schools.
 - Inconsistencies: Variations in reporting standards across different schools may impact the uniformity of the data.
@@ -32,14 +39,21 @@ library(ggdendro)
 ```
 
 ```{r}
+<<<<<<< HEAD
 data <- read_csv("Graduate Results.csv", 
+=======
+data <- read_csv("Graduation_Results.csv", 
+>>>>>>> 0f7d77b (Checkpoint-1)
                  show_col_types = FALSE)
 ```
 
 ```{r}
 cat("Number of rows:", nrow(data), "\n")
 cat("Number of columns:", ncol(data), "\n")
+<<<<<<< HEAD
 
+=======
+>>>>>>> 0f7d77b (Checkpoint-1)
 ```
 ```{r}
 cat("Column names:\n")
@@ -57,7 +71,11 @@ print(missing_values)
 
 total_missing <- sum(is.na(data))
 print(paste("Total missing values:", total_missing))
+<<<<<<< HEAD
 ```
+=======
+`````````
+>>>>>>> 0f7d77b (Checkpoint-1)
 
 ```{r}
 data_clean <- data |>
