@@ -1,4 +1,4 @@
-# Graduation Outcome Analysis
+# Graduation Outcome Analysis - Final Project Group 19
 
 This repository contains the source files and code for **Graduation Outcome Analysis**, an interactive data visualization project built using Quarto and D3.js. The project provides insights into graduation outcomes from New York City high schools, focusing on trends in graduation rates, cohort sizes, and diploma types.
 
