@@ -1,0 +1,544 @@
+# Data
+
+## Description
+Data Source : The dataset, titled “Graduation results for Cohorts 2012 to 2019 (Classes of 2016 to 2023),” is published by the New York City Department of Education via NYC OpenData. It provides detailed annual statistics on graduation outcomes, including cohort size, graduation rates, diploma types, enrollment status, and dropout rates.
+
+Data Collection : The data follows the New York State Education Department’s methodology, defining a cohort as students who first entered 9th grade in a specific school year. Graduates are defined as those earning either a Local or Regents diploma. The dataset is updated annually, ensuring it reflects the most recent statistics.
+
+Data Format : The dataset is presented in a tabular format, containing 29 columns and multiple rows for each geographic subdivision or school. 
+Key fields include:
+- Cohort Year: Year of entry into 9th grade.
+- % Grads: Percentage of graduates in a cohort.
+- Dropout: Number of students who dropped out.
+- % Advanced Regents of Cohort: Percentage of students earning an Advanced Regents diploma relative to the cohort.
+
+Data Frequency and Updates : The dataset is updated annually, with the most recent data available as of April 4, 2024. This ensures consistency and relevance for long-term trend analysis.
+
+Issues and challenges:
+
+- Missing Data: Some fields, particularly those related to advanced diploma types or geographic subdivisions, may have incomplete reporting by certain schools.
+- Inconsistencies: Variations in reporting standards across different schools may impact the uniformity of the data.
+
+Data Import : The dataset is available as a downloadable CSV file on NYC OpenData. It can be imported using data analysis tools like R or Python. Libraries such as pandas or data.table in Python or readr in R will be used for efficient data manipulation and exploration.
+
+Source Documentation : The dataset can be accessed at NYC OpenData. Additional details on the data collection methodology are provided by the New York State Education Department.
+
+```{r,warning=FALSE}
+library(tidyverse)  
+library(readr)      
+library(visdat)     
+library(skimr)    
+library(ggdendro)
+
+```
+
+```{r}
+data <- read_csv("Graduate Results.csv", 
+                 show_col_types = FALSE)
+```
+
+```{r}
+cat("Number of rows:", nrow(data), "\n")
+cat("Number of columns:", ncol(data), "\n")
+
+```
+```{r}
+cat("Column names:\n")
+print(colnames(data))
+
+cat("\nSummary of the dataset:\n")
+print(summary(data))
+```
+## Missing value analysis
+
+```{r}
+missing_values <- colSums(is.na(data))
+
+print(missing_values)
+
+total_missing <- sum(is.na(data))
+print(paste("Total missing values:", total_missing))
+```
+
+```{r}
+data_clean <- data |>
+  select(-`# SACC (IEP Diploma)`, 
+         -`% SACC (IEP Diploma) of Cohort`, 
+         -`# TASC (GED)`, 
+         -`% TASC (GED) of Cohort`, 
+         -`School Name`)
+```
+
+```{r}
+missing_values <- colSums(is.na(data_clean))  # This gives the number of missing values for each column
+
+missing_df <- data.frame(
+  column = names(missing_values),
+  missing_count = missing_values
+)
+
+# Filter out columns that don't have any missing values
+missing_df <- missing_df |> filter(missing_count > 0)
+
+# Plot missing values by column
+ggplot(missing_df, aes(x = reorder(column, missing_count), y = missing_count)) +
+  geom_bar(stat = "identity", fill = "royalblue") +
+  coord_flip() +
+  labs(title = "Missing Values by Column", x = "Column", y = "Number of Missing Values") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(size = 8))
+```
+This bar chart shows missing values across dataset columns. Columns like % Total Regents of Grads, % Regents without Advanced of Grads, and % Local of Grads have the most missing data. Cohort-related percentages and count-based columns, such as # Total Regents and # Dropout, show fewer missing values. Percentage-based columns generally have more gaps, which may affect analysis quality.
+
+```{r}
+missing_matrix <- is.na(data_clean)
+
+hc <- hclust(dist(t(missing_matrix)))
+
+# Plot the dendrogram
+ggdendrogram(hc, rotate = TRUE) +
+  labs(
+    title = "Dendrogram of Missing Data Patterns",
+    x = "Columns",
+    y = "Dissimilarity"
+  )
+```
+The dendrogram illustrates clustering patterns of columns based on their missing data similarity. Columns like "% Advanced Regents of Grads" and "% Total Regents of Grads" are closely grouped, indicating similar missingness behavior. Broader separations between clusters signify distinct missingness patterns across groups of variables. This structure helps identify patterns for imputation or exclusion, ensuring efficient handling of missing data while preserving relationships within clustered variables.
+
+```{r}
+# Convert specific columns to numeric
+numeric_columns <- c("# Total Cohort", "# Grads", "% Grads", "# Total Regents",
+                     "% Total Regents of Cohort", "% Total Regents of Grads", 
+                     "# Advanced Regents", "% Advanced Regents of Cohort", 
+                     "% Advanced Regents of Grads", "# Regents without Advanced",
+                     "% Regents without Advanced of Cohort", 
+                     "% Regents without Advanced of Grads", "# Local", 
+                     "% Local of Cohort", "% Local of Grads", "# Still Enrolled", 
+                     "% Still Enrolled", "# Dropout", "% Dropout")
+
+data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) as.numeric(as.character(x)))
+
+```
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(reshape2)
+
+# Step 1: Calculate the correlation matrix for the numeric columns
+cor_matrix <- cor(data_clean[numeric_columns], use = "complete.obs", method = "pearson")
+
+# Step 2: Reshape the correlation matrix into a long format
+cor_matrix_melted <- melt(cor_matrix)
+
+# Step 3: Create the heatmap
+ggplot(cor_matrix_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +  # Use white borders for the tiles
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, 
+                       name = "Correlation") +  # Color scale for correlation values
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+        axis.text.y = element_text(size = 8)) +  # Smaller y-axis labels for readability
+  labs(title = "Correlation Heatmap", x = "Variables", y = "Variables") +
+  coord_fixed()  # Ensure that the heatmap is square
+
+```
+```{r}
+# Create a heatmap of missing values in the dataset
+missing_data <- is.na(data_clean)  # Logical matrix where TRUE = missing value
+missing_data_melted <- melt(missing_data)
+
+ggplot(missing_data_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +  # White borders for tiles
+  scale_fill_manual(values = c("gray", "red"), name = "Missing Data") +  # Gray for non-missing, red for missing
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Heatmap of Missing Data", x = "Variables", y = "Rows")
+
+```
+
+
+```{r}
+# Assuming 'Cohort Year' and 'Category' are categorical variables
+count_data <- table(data_clean$`Cohort Year`, data_clean$Category)
+
+# Convert table to data frame
+count_data_df <- as.data.frame(count_data)
+
+# Plot heatmap of counts
+ggplot(count_data_df, aes(Var1, Var2, fill = Freq)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Heatmap of Count Data", x = "Cohort Year", y = "Category") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Assuming the 'data_clean' dataframe is already prepared
+
+# Create a new column to categorize the data
+data_clean <- data_clean %>%
+  mutate(
+    Graduation_Status = case_when(
+      `% Grads` >= 80 ~ "Graduated",
+      `% Dropout` >= 10 ~ "Dropout",
+      TRUE ~ "Not Graduated"
+    )
+  )
+
+# Group by 'Cohort Year' and 'Graduation Status' and calculate the counts
+data_grouped <- data_clean %>%
+  group_by(`Cohort Year`, Graduation_Status) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create the diverging stacked bar chart
+ggplot(data_grouped, aes(x = `Cohort Year`, y = count, fill = Graduation_Status)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  coord_flip() +
+  labs(title = "Diverging Stacked Bar Chart of Graduation Status by Cohort Year",
+       x = "Cohort Year",
+       y = "Percentage",
+       fill = "Graduation Status") +
+  scale_fill_manual(values = c("Graduated" = "blue", "Dropout" = "red", "Not Graduated" = "grey")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Assuming the 'data_clean' dataframe is already prepared
+
+# Create a new column for Diploma Type based on conditions
+data_clean <- data_clean %>%
+  mutate(
+    Diploma_Type = case_when(
+      `% Advanced Regents of Cohort` > 50 ~ "Advanced Regents",
+      `% Total Regents of Cohort` > 50 ~ "Regents",
+      TRUE ~ "Local"
+    )
+  )
+
+# Group by Cohort Year and Diploma Type and calculate the counts
+data_grouped_diploma <- data_clean %>%
+  group_by(`Cohort Year`, Diploma_Type) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create the stacked bar chart for Diploma Types by Cohort Year
+ggplot(data_grouped_diploma, aes(x = `Cohort Year`, y = count, fill = Diploma_Type)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Stacked Bar Chart of Diploma Types by Cohort Year",
+       x = "Cohort Year",
+       y = "Count",
+       fill = "Diploma Type") +
+  scale_fill_manual(values = c("Advanced Regents" = "blue", "Regents" = "green", "Local" = "gray")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+```{r}
+install.packages("ggfortify", repos = "http://cran.us.r-project.org")
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(ggfortify)
+
+# Ensure numeric columns are converted to numeric type
+numeric_columns <- c("# Total Cohort", "# Grads", "% Grads", "# Total Regents",
+                     "% Total Regents of Cohort", "% Total Regents of Grads", 
+                     "# Advanced Regents", "% Advanced Regents of Cohort", 
+                     "% Advanced Regents of Grads", "# Regents without Advanced",
+                     "% Regents without Advanced of Cohort", 
+                     "% Regents without Advanced of Grads", "# Local", 
+                     "% Local of Cohort", "% Local of Grads", "# Still Enrolled", 
+                     "% Still Enrolled", "# Dropout", "% Dropout")
+
+data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) as.numeric(as.character(x)))
+
+# Remove rows with missing data in the numeric columns for PCA
+data_clean_pca <- data_clean %>%
+  select(all_of(numeric_columns)) %>%
+  na.omit()
+
+# Standardize the data (important for PCA)
+data_clean_scaled <- scale(data_clean_pca)
+
+# Perform PCA
+pca_result <- prcomp(data_clean_scaled, center = TRUE, scale. = TRUE)
+
+# Create a PCA biplot
+autoplot(pca_result, 
+         data = data_clean, 
+         colour = 'Cohort Year',  # You can change this to any grouping variable like 'School Name'
+         loadings = TRUE, 
+         loadings.label = TRUE, 
+         loadings.label.size = 3,
+         size = 3) +
+  labs(title = "PCA Biplot", 
+       subtitle = "PCA Analysis of Graduation Data") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+```
+
+
+```{r}
+library(dplyr)
+
+# Replace missing numeric values with group-wise median
+data_clean <- data_clean |>
+  group_by(`Cohort Year`, Category) |>
+  mutate(across(all_of(numeric_columns), ~ ifelse(is.na(.), median(., na.rm = TRUE), .)))
+
+```
+
+```{r}
+# Drop rows where key columns have too many missing values
+data_clean <- data_clean |>
+  filter(!is.na(`# Total Cohort`) & !is.na(`% Grads`) & !is.na(`# Dropout`))
+
+```
+
+
+```{r}
+
+# Replace missing categorical values with "Unknown"
+data_clean$Cohort[is.na(data_clean$Cohort)] <- "Unknown"
+data_clean$Category[is.na(data_clean$Category)] <- "Unknown"
+
+```
+
+```{r}
+# Remove rows with outliers in specific columns
+data_clean <- data_clean |>
+  filter(between(`% Grads`, 0, 100), between(`% Dropout`, 0, 100))
+
+```
+
+
+
+
+```{r}
+ggplot(data_clean, aes(x = `% Grads`, y = `% Dropout`, color = `Cohort Year`)) +
+  geom_point(alpha = 0.7) +
+  scale_color_viridis_c() +
+  labs(title = "% Grads vs % Dropout by Cohort Year",
+       x = "% Grads", y = "% Dropout", color = "Cohort Year") +
+  theme_minimal()
+```
+
+```{r}
+# Bar Chart
+ggplot(data_clean, aes(x = as.factor(`Cohort Year`))) +
+  geom_bar(position = "dodge") +
+  labs(title = "Count of Students by Cohort Year",
+       x = "Cohort Year", y = "Count", fill = "Category") +
+  theme_minimal()
+
+```
+
+
+```{r}
+
+# Histogram
+ggplot(data_clean, aes(x = `% Grads`)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of % Grads",
+       x = "% Grads", y = "Frequency") +
+  theme_minimal()
+
+```
+
+```{r}
+library(ggalluvial)
+
+ggplot(data_clean,
+       aes(axis1 = `Cohort Year`, axis2 = `Category`, y = `# Total Cohort`)) +
+  geom_alluvium(aes(fill = `Category`), width = 0.2) +
+  geom_stratum(width = 0.2, fill = "gray", color = "black") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  labs(title = "Alluvial Plot of Cohort Year, Category, and Total Cohort",
+       x = "", y = "Total Cohort") +
+  theme_minimal()
+```
+```{r}
+# Cleveland Dot Plot
+aggregated_data <- data_clean |>
+  group_by(Category) |>
+  summarize(mean_grads = mean(`% Grads`, na.rm = TRUE))
+
+# Cleveland dot plot of aggregated data
+ggplot(aggregated_data, aes(x = mean_grads, y = reorder(Category, mean_grads))) +
+  geom_point(color = "darkblue", size = 3) +
+  labs(title = "Average Graduation Rates by Category",
+       x = "Mean % Grads", y = "Category") +
+  theme_minimal()
+
+```
+```{r}
+# Mosaic Plot
+top_grads <- data_clean |>
+  group_by(`Geographic Subdivision`) |>
+  summarize(mean_grads = mean(`% Grads`, na.rm = TRUE)) |>
+  arrange(desc(mean_grads)) |>
+  head(10)
+
+# Cleveland dot plot for top 10 subdivisions
+ggplot(top_grads, aes(x = mean_grads, y = reorder(`Geographic Subdivision`, mean_grads))) +
+  geom_point(color = "darkgreen", size = 3) +
+  labs(title = "Top 10 Subdivisions by Graduation Rates",
+       x = "Mean % Grads", y = "Geographic Subdivision") +
+  theme_minimal()
+```
+
+```{r}
+ggplot(data_clean, aes(x = `% Grads`, y = reorder(`Geographic Subdivision`, `% Grads`))) +
+  geom_point(color = "darkorange", size = 2) +
+  facet_wrap(~ `Cohort Year`, scales = "free_y") +
+  labs(title = "Graduation Rates by Subdivision (Faceted by Cohort Year)",
+       x = "% Grads", y = "Geographic Subdivision") +
+  theme_minimal() +
+  theme(strip.text = element_text(size = 10))
+```
+```{r}
+data_clean <- data_clean |>
+  mutate(highlight = ifelse(`Category` == "Specific Category", "Highlighted", "Other"))
+
+ggplot(data_clean, aes(x = `% Grads`, y = reorder(`Geographic Subdivision`, `% Grads`), color = highlight)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c("Highlighted" = "red", "Other" = "gray")) +
+  labs(title = "Highlight Specific Categories in Graduation Rates",
+       x = "% Grads", y = "Geographic Subdivision", color = "Group") +
+  theme_minimal()
+```
+
+```{r}
+  ggplot(data_clean, aes(x = `% Grads`, y = reorder(`Geographic Subdivision`, `% Grads`))) +
+  geom_point(color = "darkorange", size = 2) +
+  facet_wrap(~ `Cohort Year`, scales = "free_y") +
+  labs(title = "Graduation Rates by Subdivision (Faceted by Cohort Year)",
+       x = "% Grads", y = "Geographic Subdivision") +
+  theme_minimal() +
+  theme(strip.text = element_text(size = 10))
+```
+
+
+```{r}
+# Check for missing values in the key columns
+summary(data_for_mosaic)
+table(is.na(data_for_mosaic$`Cohort Year`))
+table(is.na(data_for_mosaic$`Diploma Type`))
+
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Step 1: Clean and prepare the data
+data_for_heatmap <- data_clean %>%
+  mutate(
+    # Create 'Diploma Type' based on conditions
+    `Diploma Type` = case_when(
+      `# Advanced Regents` > 0 ~ "Advanced Regents",
+      `# Regents without Advanced` > 0 ~ "Regents without Advanced",
+      `# Local` > 0 ~ "Local",
+      TRUE ~ "Other"
+    ),
+    # Ensure that 'Cohort Year' and 'Diploma Type' are factors
+    `Cohort Year` = factor(`Cohort Year`),
+    `Diploma Type` = factor(`Diploma Type`)
+  ) %>%
+  filter(`Diploma Type` != "Other")  # Filter out "Other" to focus on relevant diploma types
+
+# Step 2: Summarize the data by Cohort Year and Diploma Type
+data_summary <- data_for_heatmap %>%
+  count(`Cohort Year`, `Diploma Type`) %>%
+  spread(key = `Diploma Type`, value = n, fill = 0)  # Reshape the data to wide format
+
+# Step 3: Plot the Heatmap
+ggplot(data_summary, aes(x = `Cohort Year`, y = `Diploma Type`)) +
+  geom_tile(aes(fill = n), color = "white") +  # Create the heatmap with 'n' as fill color
+  scale_fill_gradient(low = "white", high = "blue") +  # Use a color gradient (light to dark blue)
+  labs(
+    title = "Heatmap of Diploma Type by Cohort Year",
+    x = "Cohort Year",
+    y = "Diploma Type",
+    fill = "Count"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate the x-axis labels for better readability
+
+```
+
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(ggmosaic)
+
+# Assuming data_clean is already loaded
+
+# Step 1: Clean the data and create a 'Diploma Type' column
+data_for_mosaic <- data_clean %>%
+  mutate(
+    # Create a new 'Diploma Type' based on the conditions
+    `Diploma Type` = case_when(
+      `# Advanced Regents` > 0 ~ "Advanced Regents",
+      `# Regents without Advanced` > 0 ~ "Regents without Advanced",
+      `# Local` > 0 ~ "Local",
+      TRUE ~ "Other"
+    ),
+    # Ensure 'Cohort Year' and 'Diploma Type' are factors
+    `Cohort Year` = as.factor(`Cohort Year`),
+    `Diploma Type` = as.factor(`Diploma Type`)
+  )
+
+# Step 2: Filter out rows with 'Diploma Type' as 'Other'
+data_for_mosaic <- data_for_mosaic %>%
+  filter(`Diploma Type` != "Other")
+
+# Step 3: Create the mosaic plot using ggplot2 and ggmosaic
+ggplot(data_for_mosaic) +
+  geom_mosaic(aes(weight = 1, x = product(`Cohort Year`, `Diploma Type`), fill = `Diploma Type`)) +
+  labs(
+    title = "Mosaic Plot of Diploma Type by Cohort Year",
+    x = "Cohort Year",
+    y = "Proportion",
+    fill = "Diploma Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Step 4: Display counts inside the mosaic blocks (Updated to use after_stat(count))
+ggplot(data_for_mosaic) +
+  geom_mosaic(aes(weight = 1, x = product(`Cohort Year`, `Diploma Type`), fill = `Diploma Type`)) +
+  geom_text(stat = "mosaic", aes(label = after_stat(count)), size = 3, color = "white") +
+  labs(
+    title = "Mosaic Plot of Diploma Type by Cohort Year with Counts",
+    x = "Cohort Year",
+    y = "Proportion",
+    fill = "Diploma Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+

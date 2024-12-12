@@ -103,5 +103,539 @@ ggdendrogram(hc, rotate = TRUE) +
   )
 ```
 The dendrogram illustrates clustering patterns of columns based on their missing data similarity. Columns like "% Advanced Regents of Grads" and "% Total Regents of Grads" are closely grouped, indicating similar missingness behavior. Broader separations between clusters signify distinct missingness patterns across groups of variables. This structure helps identify patterns for imputation or exclusion, ensuring efficient handling of missing data while preserving relationships within clustered variables.
+```{r}
+# Display the first 6 rows of the data
+head(data)
 
+```
+
+```{r}
+# Preprocessing: Filter and summarize data
+processed_data <- data %>%
+  filter(
+    `Report Category` == "Borough",
+    as.numeric(`Cohort Year`) >= 2015
+  ) %>%
+  mutate(
+    `% Grads` = as.numeric(`% Grads`),
+    `Geographic Subdivision` = factor(`Geographic Subdivision`),
+    `Cohort Year` = as.numeric(`Cohort Year`)
+  ) %>%
+  group_by(`Geographic Subdivision`, `Cohort Year`) %>%
+  summarise(Average_Grads = mean(`% Grads`, na.rm = TRUE)) %>%
+  drop_na(Average_Grads)
+
+# Line chart with facets for better clarity
+ggplot(processed_data, aes(x = `Cohort Year`, y = Average_Grads, color = `Geographic Subdivision`, group = `Geographic Subdivision`)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  facet_wrap(~ `Geographic Subdivision`, ncol = 2, scales = "free_y") +
+  labs(
+    title = "Graduation Rates for Boroughs (2015-2019)",
+    subtitle = "Average Graduation Rates by Borough and Cohort Year",
+    x = "Cohort Year",
+    y = "Average Graduation Rate (%)",
+    color = "Borough"
+  ) +
+  scale_color_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(size = 10, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+
+```
+```{r}
+# Preprocessing: Filter for key categories and years with a focus on graduation rates above a threshold
+filtered_data <- data %>%
+  filter(
+    `Report Category` == "Citywide",
+    `Category` %in% c("All Students", "Asian", "Black", "White", "Hispanic"),
+    as.numeric(`Cohort Year`) >= 2015,
+    `% Grads` >= 50 # Filter to focus on graduation rates above 50%
+  ) %>%
+  mutate(`% Grads` = as.numeric(`% Grads`)) %>%
+  drop_na(`% Grads`)
+
+# Plot: Faceted bar chart with fixed scales
+ggplot(filtered_data, aes(x = factor(`Cohort Year`), y = `% Grads`, fill = `Category`)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8), color = "black") +
+  facet_wrap(~ `Category`, ncol = 2, scales = "fixed") +
+  labs(
+    title = "Graduation Rates by Cohort Year (Citywide)",
+    subtitle = "Filtered for Key Categories (2015-2019), Fixed Scales and Rates Above 50%",
+    x = "Cohort Year",
+    y = "Graduation Rate (%)",
+    fill = "Category"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "none"
+  )
+
+```
+
+
+```{r}
+# Preprocessing
+line_chart_data <- data %>%
+  filter(`Report Category` == "Borough") %>%
+  mutate(`% Grads` = as.numeric(`% Grads`)) %>%
+  group_by(`Geographic Subdivision`, `Cohort Year`) %>%
+  summarise(Average_Grads = mean(`% Grads`, na.rm = TRUE)) %>%
+  drop_na(Average_Grads)
+
+# Plot
+ggplot(line_chart_data, aes(x = factor(`Cohort Year`), y = Average_Grads, color = `Geographic Subdivision`, group = `Geographic Subdivision`)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    title = "Trends in Graduation Rates by Borough",
+    x = "Cohort Year",
+    y = "Average Graduation Rate (%)",
+    color = "Borough"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+library(tidyverse)
+
+# Preprocessing
+stacked_data <- data %>%
+  filter(`Report Category` == "Citywide") %>%
+  mutate(
+    `# Advanced Regents` = as.numeric(`# Advanced Regents`),
+    `# Local` = as.numeric(`# Local`),
+    `# Grads` = as.numeric(`# Grads`)
+  ) %>%
+  group_by(`Cohort Year`) %>%
+  summarise(
+    Advanced_Regents = sum(`# Advanced Regents`, na.rm = TRUE),
+    Local = sum(`# Local`, na.rm = TRUE),
+    Total_Grads = sum(`# Grads`, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Advanced_Regents_Perc = Advanced_Regents / Total_Grads * 100,
+    Local_Perc = Local / Total_Grads * 100
+  )
+
+# Reshape for plotting
+stacked_data_long <- stacked_data %>%
+  pivot_longer(cols = c(Advanced_Regents_Perc, Local_Perc), names_to = "Diploma Type", values_to = "Percentage")
+
+ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = `Diploma Type`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_y_log10() +  # Apply log transformation
+  labs(
+    title = "Distribution of Diploma Types Over Time",
+    subtitle = "Log Transformation Applied to Y-Axis for Better Visibility",
+    x = "Cohort Year",
+    y = "Log-Scaled Percentage of Graduates",
+    fill = "Diploma Type"
+  ) +
+  scale_fill_manual(values = c("blue", "lightblue")) +  # Consistent colors
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+```{r}
+library(tidyverse)
+
+# Preprocessing
+stacked_data <- data %>%
+  filter(`Report Category` == "Citywide") %>%
+  mutate(
+    `# Advanced Regents` = as.numeric(`# Advanced Regents`),
+    `# Local` = as.numeric(`# Local`),
+    `# Grads` = as.numeric(`# Grads`)
+  ) %>%
+  group_by(`Cohort Year`) %>%
+  summarise(
+    Advanced_Regents = sum(`# Advanced Regents`, na.rm = TRUE),
+    Local = sum(`# Local`, na.rm = TRUE),
+    Total_Grads = sum(`# Grads`, na.rm = TRUE)
+  ) %>%
+  mutate(
+    Advanced_Regents_Perc = Advanced_Regents / Total_Grads * 100,
+    Local_Perc = Local / Total_Grads * 100
+  )
+
+# Reshape for plotting
+stacked_data_long <- stacked_data %>%
+  pivot_longer(cols = c(Advanced_Regents_Perc, Local_Perc), names_to = "Diploma Type", values_to = "Percentage")
+
+ggplot(stacked_data_long, aes(x = factor(`Cohort Year`), y = Percentage, fill = `Diploma Type`)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 30, 40, 50)) +  # Adjust y-axis breaks
+  labs(
+    title = "Distribution of Diploma Types Over Time",
+    subtitle = "Custom Y-Axis for Better Bar Visibility",
+    x = "Cohort Year",
+    y = "Percentage of Graduates",
+    fill = "Diploma Type"
+  ) +
+  scale_fill_manual(values = c("lightblue", "blue")) +  # Consistent colors
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+```{r}
+library(tidyverse)
+library(treemapify)
+
+# Preprocessing: Aggregate data for total cohort sizes
+treemap_data <- data %>%
+  filter(`Report Category` == "Citywide") %>%
+  mutate(`# Total Cohort` = as.numeric(`# Total Cohort`)) %>%
+  group_by(`Category`) %>%
+  summarise(Total_Cohort = sum(`# Total Cohort`, na.rm = TRUE)) %>%
+  arrange(desc(Total_Cohort))
+
+# Treemap with improved colors and appearance
+ggplot(treemap_data, aes(area = Total_Cohort, fill = Total_Cohort, label = Category)) +
+  geom_treemap() +
+  geom_treemap_text(
+    fontface = "bold", 
+    colour = "white", 
+    place = "centre", 
+    size = 5
+  ) +
+  scale_fill_gradient(low = "lightblue", high = "darkblue", name = "Cohort Size") +
+  labs(
+    title = "Treemap of Total Cohort Sizes by Category",
+    subtitle = "Visualizing Cohort Distribution with Improved Color Gradient"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(size = 12, hjust = 0.5),
+    legend.position = "bottom"
+  )
+```
+
+
+```{r}
+library(tidyverse)
+
+# Preprocessing: Filter for key categories
+filtered_data <- data %>%
+  filter(
+    `Report Category` == "Citywide",
+    `Category` %in% c("All Students", "Male", "Female", "Hispanic", "White", "Black", "Asian", "Economically Disadvantaged")
+  ) %>%
+  mutate(`% Dropout` = as.numeric(`% Dropout`)) %>%
+  drop_na(`% Dropout`)
+
+# Boxplot with faceting
+ggplot(filtered_data, aes(x = `Category`, y = `% Dropout`, fill = `Category`)) +
+  geom_boxplot(outlier.color = "red", outlier.shape = 16, notch = TRUE) +
+  facet_wrap(~ `Category`, scales = "free_y", ncol = 2) +
+  labs(
+    title = "Dropout Rates by Key Categories (Citywide)",
+    subtitle = "Filtered for Key Categories with Facets",
+    x = "Category",
+    y = "Dropout Rate (%)",
+    fill = "Category"
+  ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set3") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "none",
+    strip.text = element_text(size = 10, face = "bold")
+  )
+
+```
+```{r}
+library(corrplot)
+
+# Preprocessing
+heatmap_data <- data %>%
+  select(starts_with("%")) %>%
+  mutate_all(as.numeric) %>%
+  drop_na()
+
+# Compute correlation matrix
+correlation_matrix <- cor(heatmap_data, use = "complete.obs")
+
+# Plot with improved readability
+corrplot(
+  correlation_matrix,
+  method = "color",             # Use colored tiles for better visuals
+  type = "lower",               # Show only the lower triangle
+  tl.cex = 0.8,                 # Adjust text label size
+  tl.col = "black",             # Use black text for labels
+  tl.srt = 45,                  # Rotate text labels for better spacing
+  addCoef.col = "black",        # Display correlation coefficients in black
+  number.cex = 0.7,             # Adjust coefficient text size
+  col = colorRampPalette(c("red", "white", "blue"))(200), # Enhanced color scheme
+  title = "Improved Correlation Heatmap", # Add title
+  mar = c(1, 1, 2, 1)           # Adjust margins for better spacing
+)
+
+
+```
+```{r}
+colnames(data)
+```
+
+```{r}
+# Correctly identify and use the column that represents boroughs
+filtered_data <- data %>%
+  select(`Geographic Subdivision`, `Cohort Year`, `% Grads`, `% Still Enrolled`, `% Dropout`) %>%
+  filter(!is.na(`% Grads`) & !is.na(`% Still Enrolled`) & !is.na(`% Dropout`)) %>%
+  pivot_longer(cols = c(`% Grads`, `% Still Enrolled`, `% Dropout`),
+               names_to = "Graduation_Status",
+               values_to = "Percentage") %>%
+  filter(Percentage > 0)
+
+# Group and summarize for a concise visualization
+summarized_data <- filtered_data %>%
+  group_by(`Geographic Subdivision`, `Cohort Year`, Graduation_Status) %>%
+  summarise(Percentage = sum(Percentage, na.rm = TRUE), .groups = "drop")
+
+# Generate the alluvial diagram
+ggplot(summarized_data,
+       aes(axis1 = `Geographic Subdivision`, axis2 = `Cohort Year`, axis3 = Graduation_Status, y = Percentage)) +
+  geom_alluvium(aes(fill = Graduation_Status), width = 0.25) +
+  geom_stratum(width = 0.25, fill = "grey90", color = "black") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 4) +
+  scale_x_discrete(labels = c("Borough", "Cohort Year", "Graduation Status")) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Simplified Alluvial Diagram of NYC Graduation Outcomes",
+    subtitle = "Visualizing Graduation Status by Borough and Cohort Year",
+    x = "Attributes",
+    y = "Percentage (%)",
+    fill = "Graduation Status"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12),
+    axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10)
+  )
+
+```
+
+```{r}
+# Load required libraries
+library(tidyverse)
+library(ggalluvial)
+
+# Prepare the data
+alluvial_data <- data %>%
+  # Filter and clean data
+  select(`Geographic Subdivision`, `Cohort Year`, `% Grads`, `% Still Enrolled`, `% Dropout`) %>%
+  mutate(
+    `Cohort Year` = as.character(`Cohort Year`),
+    `% Grads` = as.numeric(`% Grads`),
+    `% Still Enrolled` = as.numeric(`% Still Enrolled`),
+    `% Dropout` = as.numeric(`% Dropout`)
+  ) %>%
+  pivot_longer(cols = c(`% Grads`, `% Still Enrolled`, `% Dropout`),
+               names_to = "Graduation_Status",
+               values_to = "Percentage") %>%
+  filter(!is.na(Percentage) & Percentage > 0) %>%
+  group_by(`Geographic Subdivision`, `Cohort Year`, Graduation_Status) %>%
+  summarise(Percentage = sum(Percentage, na.rm = TRUE), .groups = "drop") %>%
+  ungroup()
+
+# Plot the alluvial diagram
+ggplot(alluvial_data,
+       aes(axis1 = `Geographic Subdivision`, axis2 = `Cohort Year`, axis3 = Graduation_Status, y = Percentage)) +
+  geom_alluvium(aes(fill = Graduation_Status), width = 0.2) +
+  geom_stratum(width = 0.2, fill = "grey", color = "black") +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
+  scale_x_discrete(labels = c("Geographic Subdivision", "Cohort Year", "Graduation Status")) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Alluvial Diagram of NYC Graduation Outcomes",
+    subtitle = "Visualizing Graduation Status by Borough and Cohort Year",
+    x = "Attributes",
+    y = "Percentage (%)",
+    fill = "Graduation Status"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    axis.title = element_text(size = 12)
+  )
+
+```
+```{r}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(mapproj)
+library(ggrepel)
+
+# Use built-in map data for NYC boroughs
+ny_map <- map_data("county") %>%
+  filter(region == "new york", subregion %in% c("bronx", "kings", "new york", "queens", "richmond"))
+
+# Simulated graduation rate data for boroughs (replace with actual values)
+borough_data <- data.frame(
+  subregion = c("bronx", "kings", "new york", "queens", "richmond"),
+  Graduation_Rate = c(76.5, 81.0, 88.2, 83.4, 79.9), # Example rates
+  label = c("The Bronx", "Brooklyn", "Manhattan", "Queens", "Staten Island") # Borough names
+)
+
+# Merge borough data with map data
+nyc_map <- ny_map %>%
+  left_join(borough_data, by = "subregion")
+
+# Calculate centroids for labels
+centroids <- nyc_map %>%
+  group_by(subregion) %>%
+  summarize(
+    long = mean(range(long)),
+    lat = mean(range(lat)),
+    label = first(label)
+  )
+
+# Plot the choropleth map
+ggplot(nyc_map, aes(x = long, y = lat, group = group, fill = Graduation_Rate)) +
+  geom_polygon(color = "black", size = 0.3) +
+  geom_text_repel(data = centroids, aes(x = long, y = lat, label = label), size = 4, fontface = "bold", inherit.aes = FALSE) +
+  coord_map() +
+  scale_fill_gradient(low = "lightblue", high = "blue", name = "Grad Rate (%)") +
+  labs(
+    title = "NYC Borough-Wise Graduation Rates",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
+    legend.position = "bottom"
+  )
+
+```
+
+
+```{r}
+install.packages("sf")
+install.packages("tigris")
+
+```
+
+```{r}
+# Load required libraries
+library(tidyverse)
+library(sf)
+library(tigris)
+
+# Load NYC borough shapefile using tigris
+nyc_boroughs <- counties(state = "NY", cb = TRUE) %>%
+  filter(NAME %in% c("New York", "Richmond", "Queens", "Kings", "Bronx"))
+
+# Load dataset
+# Replace 'data' with your dataset containing graduation rates and borough information
+data <- tibble(
+  Borough = c("Manhattan", "Staten Island", "Queens", "Brooklyn", "Bronx"),
+  GradRate = c(85.3, 82.5, 83.7, 81.2, 77.5)
+)
+
+# Map borough names to match shapefile
+data <- data %>%
+  mutate(
+    NAME = case_when(
+      Borough == "Manhattan" ~ "New York",
+      Borough == "Staten Island" ~ "Richmond",
+      Borough == "Brooklyn" ~ "Kings",
+      TRUE ~ Borough
+    )
+  )
+
+# Merge shapefile and data
+nyc_boroughs <- nyc_boroughs %>%
+  left_join(data, by = "NAME")
+
+# Plot the choropleth
+ggplot(nyc_boroughs) +
+  geom_sf(aes(fill = GradRate), color = "black") +
+  scale_fill_viridis_c(option = "C", name = "Grad Rate (%)") +
+  labs(
+    title = "NYC Borough-Wise Graduation Rates",
+    subtitle = "Filtered for Accurate Boroughs",
+    caption = "Data Source: NYC Graduation Rates Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+```
+```{r}
+# Load required libraries
+library(tidyverse)
+library(sf)
+library(tigris)
+
+# Load NYC borough shapefile using tigris
+nyc_boroughs <- counties(state = "NY", cb = TRUE) %>%
+  filter(NAME %in% c("New York", "Richmond", "Queens", "Kings", "Bronx"))
+
+# Load dataset
+# Replace 'data' with your dataset containing graduation rates and borough information
+data <- tibble(
+  Borough = c("Manhattan", "Staten Island", "Queens", "Brooklyn", "Bronx"),
+  GradRate = c(85.3, 82.5, 83.7, 81.2, 77.5)
+)
+
+# Map borough names to match shapefile
+data <- data %>%
+  mutate(
+    NAME = case_when(
+      Borough == "Manhattan" ~ "New York",
+      Borough == "Staten Island" ~ "Richmond",
+      Borough == "Brooklyn" ~ "Kings",
+      TRUE ~ Borough
+    )
+  )
+
+# Merge shapefile and data
+nyc_boroughs <- nyc_boroughs %>%
+  left_join(data, by = "NAME")
+
+# Plot the choropleth with labels and sequential blue color scheme
+ggplot(nyc_boroughs) +
+  geom_sf(aes(fill = GradRate), color = "black") +
+  geom_sf_text(aes(label = Borough), size = 4, color = "black") +
+  scale_fill_distiller(palette = "Blues", direction = 1, name = "Grad Rate (%)") +
+  labs(
+    title = "NYC Borough-Wise Graduation Rates",
+    subtitle = "Filtered for Accurate Boroughs with Proper Labels",
+    caption = "Data Source: NYC Graduation Rates Dataset"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    plot.subtitle = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+```
 
