@@ -212,7 +212,7 @@ ggplot(filtered_treemap_data, aes(area = Total_Cohort, fill = Total_Cohort, labe
   scale_fill_gradient(low = "lightblue", high = "darkblue", name = "Cohort Size") +
   labs(
     title = "Filtered Treemap of Total Cohort Sizes by Category",
-    subtitle = "Excluding Broad Categories for Better Clarity"
+    subtitle = "Excluding Broad Categories for Better clarity"
   ) +
   theme_minimal() +
   theme(
