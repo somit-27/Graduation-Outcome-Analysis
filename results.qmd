@@ -38,4 +38,97 @@ data_clean[numeric_columns] <- lapply(data_clean[numeric_columns], function(x) a
 
 ```
 
+```{r}
+ggplot(data_clean, aes(x = as.factor(`Cohort Year`))) +
+  geom_bar(position = "dodge", fill = "lightblue") +  # Change 'color' to 'fill' for the bar color
+  labs(title = "Count of Students by Cohort Year",
+       x = "Cohort Year", y = "Count") +
+  theme_minimal()
+```
+```{r}
+# Histogram
+ggplot(data_clean, aes(x = `% Grads`)) +
+  geom_histogram(binwidth = 5, fill = "steelblue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of % Grads",
+       x = "% Grads", y = "Frequency") +
+  theme_minimal()
+
+```
+
+```{r}
+# Cleveland Dot Plot
+aggregated_data <- data_clean |>
+  group_by(Category) |>
+  summarize(mean_grads = mean(`% Grads`, na.rm = TRUE))
+
+# Cleveland dot plot of aggregated data
+ggplot(aggregated_data, aes(x = mean_grads, y = reorder(Category, mean_grads))) +
+  geom_point(color = "darkblue", size = 3) +
+  labs(title = "Average Graduation Rates by Category",
+       x = "Mean % Grads", y = "Category") +
+  theme_minimal()
+```
+
+```{r}
+top_categories <- data_clean %>%
+  group_by(Category) %>%
+  summarise(median_value = median(`% Advanced Regents of Cohort`, na.rm = TRUE)) %>%
+  arrange(desc(median_value)) %>%
+  slice_head(n = 10) %>% # Adjust 'n' to include fewer or more categories
+  pull(Category)
+
+filtered_data <- data_clean %>%
+  filter(Category %in% top_categories)
+
+# Ridgeline Plot
+ggplot(filtered_data, aes(x = `% Advanced Regents of Cohort`, y = fct_reorder(Category, `% Advanced Regents of Cohort`, .fun = median), fill = Category)) +
+  geom_density_ridges(scale = 2, alpha = 0.8) +
+  labs(
+    title = "Distribution of Advanced Regents Percentage by Top Categories",
+    x = "Advanced Regents (% of Cohort)",
+    y = "Category"
+  ) +
+  theme_ridges(center_axis_labels = TRUE) +
+  theme(
+    axis.text.y = element_text(size = 10),
+    legend.position = "none"
+  ) +
+  scale_fill_viridis_d()
+
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Assuming the 'data_clean' dataframe is already prepared
+
+# Create a new column to categorize the data
+data_clean <- data_clean %>%
+  mutate(
+    Graduation_Status = case_when(
+      `% Grads` >= 80 ~ "Graduated",
+      `% Dropout` >= 10 ~ "Dropout",
+      TRUE ~ "Not Graduated"
+    )
+  )
+
+# Group by 'Cohort Year' and 'Graduation Status' and calculate the counts
+data_grouped <- data_clean %>%
+  group_by(`Cohort Year`, Graduation_Status) %>%
+  summarise(count = n(), .groups = 'drop')
+
+# Create the diverging stacked bar chart
+ggplot(data_grouped, aes(x = `Cohort Year`, y = count, fill = Graduation_Status)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  coord_flip() +
+  labs(title = "Diverging Stacked Bar Chart of Graduation Status by Cohort Year",
+       x = "Cohort Year",
+       y = "Percentage",
+       fill = "Graduation Status") +
+  scale_fill_manual(values = c("Graduated" = "blue", "Dropout" = "lightblue", "Not Graduated" = "lightgrey")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
 
