@@ -43,6 +43,7 @@ if (nrow(filtered_data) > 0) {
 </div>
 
 <div id="plot"></div>
+<base href="/Graduation-Outcome-Analysis/">
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <script src="scripts/myscript.js"></script>
