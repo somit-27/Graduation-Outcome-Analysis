@@ -1,1 +1,13 @@
 # Conclusion
+
+## Key Takeaways
+
+Graduation rates across NYC boroughs have shown a steady improvement from 2012 to 2019, with Queens standing out in 2019 by achieving the highest graduation percentage of 86.80%. Borough-specific insights reveal that Staten Island and Queens consistently perform well, while the Bronx lags behind, highlighting disparities that warrant further attention. The combination of static and interactive visualizations proved effective in delivering a comprehensive view of graduation trends, demographic impacts, and borough-level challenges, making the data more accessible and insightful for stakeholders.
+
+## Limitations
+
+The analysis is limited by the scope of the dataset, which focuses on borough-level trends and does not delve into variations within boroughs or at the school level. While demographic factors are included, their interaction with socioeconomic elements remains unexplored, which could provide a deeper understanding of the disparities. Additionally, the study relies on data from 2012 to 2019, which may not capture longer-term trends or recent changes in educational outcomes.
+
+## Future Scope
+
+Future analyses could explore more granular data, such as school-level insights, to uncover localized challenges and opportunities for improvement. Investigating the interplay between demographics, socioeconomic factors, and education policies would provide a richer understanding of the underlying disparities. Incorporating predictive modeling could also help forecast graduation trends and identify key drivers for success. Lastly, extending the dataset to include more recent years would enable a more up-to-date evaluation of graduation rates and ensure the relevance of the findings.

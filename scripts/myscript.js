@@ -87,19 +87,26 @@ document.addEventListener("DOMContentLoaded", function () {
       .attr("height", d => height - margin.bottom - yScale(d["% Grads"]))
       .attr("fill", "steelblue")
       .on("mouseover", function (event, d) {
-        d3.select(this).attr("fill", "orange");
+      d3.select(this).attr("fill", "orange");
+    
+      // Get mouse position relative to the SVG
+      const [xPos, yPos] = d3.pointer(event);
+    
+      // Remove any existing tooltip before adding a new one
+      d3.select("#tooltip").remove();
+    
+      // Append the tooltip and position it at the mouse position
+      svg
+        .append("text")
+        .attr("id", "tooltip")
+        .attr("x", xPos)  // Position tooltip at mouse X
+        .attr("y", yPos - 10)  // Position it slightly above the bar
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .attr("fill", "black")
+        .text(`${d["% Grads"].toFixed(2)}%`);
+    })
 
-        // Tooltip
-        svg
-          .append("text")
-          .attr("id", "tooltip")
-          .attr("x", xScale(d.Year) + xScale.bandwidth() / 2)
-          .attr("y", yScale(d["% Grads"]) - 10)
-          .attr("text-anchor", "middle")
-          .attr("font-size", "12px")
-          .attr("fill", "black")
-          .text(`${d["% Grads"].toFixed(2)}%`);
-      })
       .on("mouseout", function () {
         d3.select(this).attr("fill", "steelblue");
         d3.select("#tooltip").remove();
